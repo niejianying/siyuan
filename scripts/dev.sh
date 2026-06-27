@@ -77,6 +77,15 @@ fi
 # 排除 Apple Double + 使用 ustar 格式（Dart TarDecoder 不支持 PAX 头）
 COPYFILE_DISABLE=1 tar cf - --exclude='._*' --format=ustar -C "$TMPDIR" . | gzip -n > "$OUTPUT_DIR/siyuan-assets.tar.gz"
 
+echo "=== [5/5] 构建 iOS Framework ==="
+export PATH="$PATH:$(go env GOPATH 2>/dev/null)/bin"
+command -v gomobile >/dev/null 2>&1 || { echo "❌ gomobile 未安装，请先执行: go install golang.org/x/mobile/cmd/gomobile@latest"; exit 1; }
+cd "$SIYUAN_DIR/kernel"
+gomobile init 2>/dev/null || true
+gomobile bind -tags fts5 -ldflags '-s -w' -v -o "$SIYUAN_DIR/kernel/SiYuanKernel.xcframework" -target=ios ./mobile/
+cp -Rf "$SIYUAN_DIR/kernel/SiYuanKernel.xcframework" "$NIJIANYING_DIR/ios/Frameworks/SiYuanKernel.xcframework"
+echo "iOS Framework 已更新"
+
 echo ""
 echo "=== 完成 ==="
 echo "输出: $OUTPUT_DIR/siyuan-assets.tar.gz ($(ls -lh "$OUTPUT_DIR/siyuan-assets.tar.gz" | awk '{print $5}'))"
