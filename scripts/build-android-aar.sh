@@ -4,13 +4,17 @@
 # 默认输出: kernel_dir/siyuan-kernel.aar
 set -e
 
-KERNEL_DIR="$1"
-OUTPUT_FILE="${2:-$KERNEL_DIR/siyuan-kernel.aar}"
-
-if [ -z "$KERNEL_DIR" ]; then
+if [ -z "$1" ]; then
   echo "用法: build-android-aar.sh <kernel_dir> [output_file]"
   exit 1
 fi
+
+KERNEL_DIR="$(cd "$1" && pwd)"
+OUTPUT_FILE="${2:-$KERNEL_DIR/siyuan-kernel.aar}"
+case "$OUTPUT_FILE" in
+  /*) ;;
+  *) OUTPUT_FILE="$(pwd)/$OUTPUT_FILE" ;;
+esac
 
 export PATH="$PATH:$(go env GOPATH 2>/dev/null)/bin"
 command -v gomobile >/dev/null 2>&1 || { echo "❌ gomobile 未安装，请先执行: go install golang.org/x/mobile/cmd/gomobile@latest"; exit 1; }

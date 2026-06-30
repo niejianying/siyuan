@@ -4,13 +4,17 @@
 # 默认输出: kernel_dir/SiYuanKernel.xcframework
 set -e
 
-KERNEL_DIR="$1"
-OUTPUT_DIR="${2:-$KERNEL_DIR}"
-
-if [ -z "$KERNEL_DIR" ]; then
+if [ -z "$1" ]; then
   echo "用法: build-ios-framework.sh <kernel_dir> [output_dir]"
   exit 1
 fi
+
+KERNEL_DIR="$(cd "$1" && pwd)"
+OUTPUT_DIR="${2:-$KERNEL_DIR}"
+case "$OUTPUT_DIR" in
+  /*) ;;
+  *) OUTPUT_DIR="$(pwd)/$OUTPUT_DIR" ;;
+esac
 
 export PATH="$PATH:$(go env GOPATH 2>/dev/null)/bin"
 command -v gomobile >/dev/null 2>&1 || { echo "❌ gomobile 未安装，请先执行: go install golang.org/x/mobile/cmd/gomobile@latest"; exit 1; }
