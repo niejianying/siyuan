@@ -4,13 +4,17 @@
 # 输出: $output_dir/siyuan-assets.tar.gz
 set -e
 
-SIYUAN_DIR="$1"
-OUTPUT_DIR="$2"
-
-if [ -z "$SIYUAN_DIR" ] || [ -z "$OUTPUT_DIR" ]; then
+if [ -z "$1" ] || [ -z "$2" ]; then
   echo "用法: build-assets.sh <siyuan_dir> <output_dir>"
   exit 1
 fi
+
+SIYUAN_DIR="$(cd "$1" && pwd)"
+OUTPUT_DIR="$2"
+case "$OUTPUT_DIR" in
+  /*) ;;
+  *) OUTPUT_DIR="$(pwd)/$OUTPUT_DIR" ;;
+esac
 
 echo "=== 构建 Web 前端 (mobile) ==="
 cd "$SIYUAN_DIR/app"
@@ -22,16 +26,20 @@ fi
 node "$WEBPACK" --mode production --config webpack.mobile.js 2>&1 | tail -1
 
 echo "=== 注入 shim + 主题 CSS ==="
-for dir in "$SIYUAN_DIR/app/stage/build/mobile"; do
-  cat > "$dir/shim.js" << 'JSEOF'
+BUILD_DIR="$SIYUAN_DIR/app/stage/build/mobile"
+if [ ! -d "$BUILD_DIR" ]; then
+  echo "❌ 构建目录不存在: $BUILD_DIR (webpack 可能未正确执行)"
+  exit 1
+fi
+cat > "$BUILD_DIR/shim.js" << 'JSEOF'
 window.JSHarmony=void 0
 if(!window.ResizeObserver){window.ResizeObserver=function(){this.observe=function(){};this.unobserve=function(){};this.disconnect=function(){}}}
 window.onerror=function(){return true}
 if(typeof window.addEventListener==='function'){var _ae=window.addEventListener;window.addEventListener=function(t,f,o){if(t==='keydown'||t==='beforeunload'||t==='pagehide'){try{_ae(t,function(e){try{f(e)}catch(ex){}},o)}catch(ex){}}else{_ae(t,f,o)}}}
 JSEOF
-  sed -i '' 's|<script defer|<script src="shim.js"></script><script defer|' "$dir/index.html" 2>/dev/null
-  sed -i '' 's|</head>|<link href="/appearance/themes/midnight/theme.css" rel="stylesheet"></head>|' "$dir/index.html" 2>/dev/null
-done
+sed -i.bak 's|<script defer|<script src="shim.js"></script><script defer|' "$BUILD_DIR/index.html"
+sed -i.bak 's|</head>|<link href="/appearance/themes/midnight/theme.css" rel="stylesheet"></head>|' "$BUILD_DIR/index.html"
+rm -f "$BUILD_DIR/index.html.bak"
 
 echo "=== 打包到 Flutter assets ==="
 rm -rf "$OUTPUT_DIR" && mkdir -p "$OUTPUT_DIR"
